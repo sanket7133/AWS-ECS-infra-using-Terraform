@@ -11,12 +11,12 @@ resource "aws_subnet" "subnet_public" {
 }
 
 
-resource "aws_subnet" "subnet_public2" {
-  vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = "10.0.2.0/24"
-  availability_zone       = "ap-south-1b"
-  map_public_ip_on_launch = true
-}
+# resource "aws_subnet" "subnet_public2" {
+#   vpc_id                  = aws_vpc.vpc.id
+#   cidr_block              = "10.0.2.0/24"
+#   availability_zone       = "ap-south-1b"
+#   map_public_ip_on_launch = true
+# }
 
 resource "aws_internet_gateway" "IGW" {
 
@@ -42,12 +42,12 @@ resource "aws_route_table_association" "RTa1" {
   route_table_id = aws_route_table.RT.id
 }
 
-resource "aws_route_table_association" "RTa2" {
-  subnet_id      = aws_subnet.subnet_public2.id
-  route_table_id = aws_route_table.RT.id
-}
+# resource "aws_route_table_association" "RTa2" {
+#   subnet_id      = aws_subnet.subnet_public2.id
+#   route_table_id = aws_route_table.RT.id
+# }
 
-resource "aws_security_group" "SG" {
+resource "aws_security_group" "SG2" {
   name   = "SG1"
   vpc_id = aws_vpc.vpc.id
 
@@ -69,6 +69,15 @@ resource "aws_security_group" "SG" {
 
   }
 
+   ingress {
+    description = "jenkins"
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+
+  }
+
   egress {
     description = "Outbound "
     from_port   = 0
@@ -79,18 +88,18 @@ resource "aws_security_group" "SG" {
 
 }
 
-resource "aws_s3_bucket" "s3" {
-  bucket = "sanketbucket-terraform"
-}
+# resource "aws_s3_bucket" "s3" {
+#   bucket = "sanketbucket-terraform"
+# }
 
-resource "aws_s3_bucket_public_access_block" "example" {
-  bucket = aws_s3_bucket.s3.id
+# resource "aws_s3_bucket_public_access_block" "example" {
+#   bucket = aws_s3_bucket.s3.id
 
-  block_public_acls       = false
-  block_public_policy     = false
-  ignore_public_acls      = false
-  restrict_public_buckets = false
-}
+#   block_public_acls       = false
+#   block_public_policy     = false
+#   ignore_public_acls      = false
+#   restrict_public_buckets = false
+# }
 
 
 # resource "aws_s3_bucket_acl" "buckerACl" {
@@ -101,12 +110,12 @@ resource "aws_s3_bucket_public_access_block" "example" {
 
 # }
 
-resource "aws_s3_bucket_ownership_controls" "s3_bucket_acl_ownership" {
-  bucket = aws_s3_bucket.s3.id
-  rule {
-    object_ownership = "ObjectWriter"
-  }
-}
+# resource "aws_s3_bucket_ownership_controls" "s3_bucket_acl_ownership" {
+#   bucket = aws_s3_bucket.s3.id
+#   rule {
+#     object_ownership = "ObjectWriter"
+#   }
+# }
 
 resource "aws_instance" "EC2a" {
 
@@ -114,74 +123,78 @@ resource "aws_instance" "EC2a" {
 
   instance_type = "t2.micro"
 
-  vpc_security_group_ids = [aws_security_group.SG.id]
+  vpc_security_group_ids = [aws_security_group.SG2.id]
 
   subnet_id = aws_subnet.subnet_public.id
 
-  user_data = base64encode(file("userdata.sh"))
+  user_data = base64encode(file("jenkins.sh"))
 
-}
-
-resource "aws_instance" "EC2b" {
-
-  ami = "ami-0f58b397bc5c1f2e8"
-
-  instance_type = "t2.micro"
-
-  vpc_security_group_ids = [aws_security_group.SG.id]
-
-  subnet_id = aws_subnet.subnet_public2.id
-  user_data = base64encode(file("userdata2.sh"))
-}
-
-resource "aws_lb" "ALB" {
-
-  load_balancer_type = "application"
-  name               = "MyALB"
-  internal           = false
-  subnets            = [aws_subnet.subnet_public.id, aws_subnet.subnet_public2.id]
-  security_groups    = [aws_security_group.SG.id]
-
-}
-
-resource "aws_lb_target_group" "ALBtG" {
-
-  name     = "ALBtG"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.vpc.id
-
-  health_check {
-    path = "/"
-    port = "traffic-port"
-
+  tags = {
+    name = "jenkins"
   }
 
 }
 
-resource "aws_lb_target_group_attachment" "ALB_attach" {
-  target_group_arn = aws_lb_target_group.ALBtG.arn
-  target_id        = aws_instance.EC2a.id
-  port             = 80
+# resource "aws_instance" "EC2b" {
 
-}
+#   ami = "ami-0f58b397bc5c1f2e8"
 
-resource "aws_lb_target_group_attachment" "ALB_attach2" {
-  target_group_arn = aws_lb_target_group.ALBtG.arn
-  target_id        = aws_instance.EC2b.id
-  port             = 80
-}
+#   instance_type = "t2.micro"
 
-resource "aws_lb_listener" "listner" {
-  load_balancer_arn = aws_lb.ALB.arn
-  port              = 80
-  protocol          = "HTTP"
-  default_action {
-    target_group_arn = aws_lb_target_group.ALBtG.arn
-    type             = "forward"
-  }
-}
+#   vpc_security_group_ids = [aws_security_group.SG.id]
 
-output "DNS" {
-  value = aws_lb.ALB.dns_name
-}
+#   subnet_id = aws_subnet.subnet_public2.id
+#   user_data = base64encode(file("userdata2.sh"))
+# }
+
+# resource "aws_lb" "ALB" {
+
+#   load_balancer_type = "application"
+#   name               = "MyALB"
+#   internal           = false
+#   subnets            = [aws_subnet.subnet_public.id, aws_subnet.subnet_public2.id]
+#   security_groups    = [aws_security_group.SG.id]
+
+# }
+
+# resource "aws_lb_target_group" "ALBtG" {
+
+#   name     = "ALBtG"
+#   port     = 80
+#   protocol = "HTTP"
+#   vpc_id   = aws_vpc.vpc.id
+
+#   health_check {
+#     path = "/"
+#     port = "traffic-port"
+
+#   }
+
+# }
+
+# resource "aws_lb_target_group_attachment" "ALB_attach" {
+#   target_group_arn = aws_lb_target_group.ALBtG.arn
+#   target_id        = aws_instance.EC2a.id
+#   port             = 80
+
+# }
+
+# resource "aws_lb_target_group_attachment" "ALB_attach2" {
+#   target_group_arn = aws_lb_target_group.ALBtG.arn
+#   target_id        = aws_instance.EC2b.id
+#   port             = 80
+# }
+
+# resource "aws_lb_listener" "listner" {
+#   load_balancer_arn = aws_lb.ALB.arn
+#   port              = 80
+#   protocol          = "HTTP"
+#   default_action {
+#     target_group_arn = aws_lb_target_group.ALBtG.arn
+#     type             = "forward"
+#   }
+# }
+
+# output "DNS" {
+#   value = aws_lb.ALB.dns_name
+# }
