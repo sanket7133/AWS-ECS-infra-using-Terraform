@@ -198,3 +198,13 @@ resource "aws_instance" "EC2a" {
 # output "DNS" {
 #   value = aws_lb.ALB.dns_name
 # }
+
+resource "aws_ecr_repository" "ECR" {
+  name                 = "projectrepo1"
+  image_tag_mutability = "MUTABLE"
+  
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+}
